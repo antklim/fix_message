@@ -1,16 +1,19 @@
 use std::error::Error;
 use std::fmt;
 
-use self::FIXMessageParseError::{InvalidChecksum};
+use self::FIXMessageParseError::{ProtocolVersionNotFound, UnsupportedProtocolVersion, InvalidChecksum};
 
 #[derive(PartialEq, Debug)]
 pub enum FIXMessageParseError {
+  ProtocolVersionNotFound,
+  UnsupportedProtocolVersion(String),
   InvalidChecksum,
 }
 
 impl fmt::Display for FIXMessageParseError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
+      UnsupportedProtocolVersion(ref version) => write!(f, "{}: {}", self.description(), version),
       _ => write!(f, "{}", self.description()),
     }
   }
@@ -19,7 +22,9 @@ impl fmt::Display for FIXMessageParseError {
 impl Error for FIXMessageParseError {
   fn description(&self) -> &str {
     match *self {
-      InvalidChecksum => "Invalid FIX message checksum",
+      ProtocolVersionNotFound => "FIX message protocol version not found",
+      UnsupportedProtocolVersion(..) => "Unsupported FIX protocol version",
+      InvalidChecksum => "Invalid FIX message checksum.",
     }
   }
 }
@@ -44,6 +49,10 @@ pub struct FIXMessageBody {
 pub struct FIXMessageFooter {
   version: String,
   body: String,
+}
+
+fn get_protocol_version(inbound_message: &str) -> Result<String, FIXMessageParseError> {
+  Ok(String::from("test"))
 }
 
 pub fn parse(inbound_message: &str) -> Result<FIXMessage, FIXMessageParseError> {
