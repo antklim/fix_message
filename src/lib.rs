@@ -10,11 +10,18 @@
 //! Message body or additional fields must be validated in version specific
 //! crates.
 
+extern crate fix_checksum;
+
 use std::error::Error;
 use std::fmt;
 use std::result;
 
-use self::FIXMessageError::{ProtocolVersionNotFound, InvalidChecksum};
+use fix_checksum::validate as validate_checksum;
+use fix_checksum::FIXChecksumValidatorError;
+
+use structs::FIXMessage;
+
+use self::FIXMessageError::*;
 
 const FIX_MESSAGE_DELIMITER: char = '\x01';
 const FIX_MESSAGE_FIELD_DELIMITER: char = '\x3D';
@@ -22,12 +29,14 @@ const FIX_MESSAGE_FIELD_DELIMITER: char = '\x3D';
 #[derive(PartialEq, Debug)]
 pub enum FIXMessageError {
   ProtocolVersionNotFound,
-  InvalidChecksum,
+  InvalidChecksum(FIXChecksumValidatorError),
+  InvalidChecksumValue,
 }
 
 impl fmt::Display for FIXMessageError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
+      InvalidChecksum(ref err) => write!(f, "{}: {}", self.description(), err),
       _ => write!(f, "{}", self.description()),
     }
   }
@@ -36,41 +45,27 @@ impl fmt::Display for FIXMessageError {
 impl Error for FIXMessageError {
   fn description(&self) -> &str {
     match *self {
-      ProtocolVersionNotFound => "FIX message protocol version not found",
-      InvalidChecksum => "Invalid FIX message checksum.",
+      ProtocolVersionNotFound => "FIX message protocol version not found.",
+      InvalidChecksum(..) => "Invalid FIX message checksum",
+      InvalidChecksumValue => "Invalid value of FIX message checksum",
     }
   }
-}
-
-/// This structure represents field/value pair of FIX message
-pub struct FIXMessageField {
-  field: String,
-  value: String
-}
-
-/// This structure represents the whole FIX message
-///
-/// ### Parsing FIX message
-/// When parsing FIX messaged then field/value pairs stored in order they
-/// were in the message.
-///
-/// ### Generating FIX messages
-/// When generating FIX message then field/value pairs will be concatenated
-/// in the order they stored in vector.
-/// First two fileds (8, 9) should not be provided in data (will be ignored if
-/// found). Field `8` - `BeginString` will be automatically added to the message
-/// header and have `FIXMessage.version` value. Field `9` - `BodyLength` will be
-/// automatically calculated and added to the message header.
-pub struct FIXMessage {
-  version: String,
-  data: Vec<FIXMessageField>
 }
 
 /// This function validates and parses FIX message
 ///
 /// # Examples
 pub fn parse(inbound_message: &str) -> FIXMessageResult<FIXMessage> {
-  unimplemented!();
+  // validate checksum
+  match validate_checksum(inbound_message) {
+    Ok(is_valid_value) => if !is_valid_value { return Err(InvalidChecksumValue); },
+    Err(err) => return Err(InvalidChecksum(err)),
+  }
+
+  Ok(FIXMessage {
+    version: "FIX".to_string(),
+    data: vec![]
+  })
 }
 
 /// This function validates and generates FIX message
@@ -82,14 +77,29 @@ pub fn generate(outbound_messge: FIXMessage) -> FIXMessageResult<String> {
 
 pub type FIXMessageResult<T> = result::Result<T, FIXMessageError>;
 
+pub mod structs;
+
 #[cfg(test)]
 mod tests {
+  extern crate fix_checksum;
+
+  use super::FIX_MESSAGE_DELIMITER;
   use super::{parse, generate};
+  use super::FIXMessageError::*;
+  use fix_checksum::FIXChecksumValidatorError::*;
+
+  fn brew_message(message_parts: Vec<&str>, delimiter: &str) -> String {
+    return message_parts
+      .iter()
+      .fold(String::new(), |message, message_part| message.to_string() + message_part + delimiter);
+  }
 
   #[test]
   fn it_should_complain_when_checksum_not_found() {
-    // checksum must always be the last
-    unimplemented!();
+    let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR",
+      "56=INVMGR", "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28"];
+    let message: String = brew_message(message_parts, &(FIX_MESSAGE_DELIMITER.to_string()));
+    assert_eq!(parse(&message).unwrap_err(), InvalidChecksum(ChecksumFieldNotFound));
   }
 
   #[test]
