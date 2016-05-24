@@ -1,9 +1,6 @@
-extern crate fix_checksum;
-
 use std::error::Error;
 use std::fmt;
 use fix_checksum::FIXChecksumValidatorError;
-
 use self::FIXMessageError::*;
 
 #[derive(PartialEq, Debug)]
