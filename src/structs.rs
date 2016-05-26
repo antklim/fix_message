@@ -3,13 +3,13 @@ use std::fmt;
 /// This structure represents field/value pair of FIX message
 #[derive(PartialEq, Debug)]
 pub struct FIXMessageField {
-  pub field: String,
+  pub tag: String,
   pub value: String
 }
 
 impl fmt::Display for FIXMessageField {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}={}", self.field, self.value)
+    write!(f, "{}={}", self.tag, self.value)
   }
 }
 
