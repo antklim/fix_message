@@ -1,28 +1,66 @@
-use super::{FIXMessageResult, FIXMessage, FIXMessageField};
-use super::{FIX_MESSAGE_DELIMITER, FIX_MESSAGE_FIELD_DELIMITER};
+use super::{
+  FIXMessageResult, FIXMessage, FIXMessageField,
+  FIX_MESSAGE_DELIMITER, FIX_MESSAGE_FIELD_DELIMITER,
+  FIX_BEGIN_STRING, FIX_BODY_LENGTH, FIX_MSG_TYPE,
+  FIX_SENDER_COMP_ID, FIX_TARGET_COMP_ID, FIX_MSG_SEQ_NUM, FIX_SENDING_TIME
+};
 use super::FIXMessageError::*;
 
 use fix_checksum::validate as validate_checksum;
 use fix_checksum::FIXChecksumValidatorError;
 
-// 8 , 9, 35, 49, 56, 34, 52
 fn validate_message_tags(message_fields: Vec<&str>) -> FIXMessageResult<Vec<FIXMessageField>> {
   let mut fix_message_fields: Vec<FIXMessageField> = Vec::with_capacity(message_fields.len());
+
+  let mut is_required_field_found = vec![false; 7];
 
   for (index, field) in message_fields.iter().enumerate() {
     let field_parts = field.splitn(2, FIX_MESSAGE_FIELD_DELIMITER).collect::<Vec<&str>>();
     let (tag, value) = (field_parts[0], field_parts[1]);
     if tag == "" || value == "" { return Err(InvalidFieldStructure); }
 
+    let mut required_field_found_index: Option<usize> = None;
+
     match index {
-      0 => if tag != "8" { return Err(InvalidFirstField(tag)) },
-      1 => if tag != "9" { return Err(InvalidSecondField(tag)) },
-      2 => if tag != "35" { return Err(InvalidThirdField(tag)) },
-      _ => (),
+      0 => {
+        if tag != FIX_BEGIN_STRING {
+          return Err(InvalidFirstField(tag))
+        }
+        required_field_found_index = Some(0)
+      },
+      1 => {
+        if tag != FIX_BODY_LENGTH {
+          return Err(InvalidSecondField(tag))
+        }
+        required_field_found_index = Some(1)
+      },
+      2 => {
+        if tag != FIX_MSG_TYPE {
+          return Err(InvalidThirdField(tag))
+        }
+        required_field_found_index = Some(2)
+      },
+      _ =>
+        match tag {
+          FIX_SENDER_COMP_ID => required_field_found_index = Some(3),
+          FIX_TARGET_COMP_ID => required_field_found_index = Some(4),
+          FIX_MSG_SEQ_NUM => required_field_found_index = Some(5),
+          FIX_SENDING_TIME => required_field_found_index = Some(6),
+          _ => (),
+        },
     }
 
+    if required_field_found_index.is_some() {
+      is_required_field_found[ required_field_found_index.unwrap() ] = true;
+    }
     fix_message_fields.push(FIXMessageField {tag: tag.to_string(), value: value.to_string()});
   }
+
+  let is_all_required_fileds_found = is_required_field_found
+    .iter()
+    .fold(true, |result, is_field_found| result && *is_field_found);
+
+  if is_all_required_fileds_found == false { return Err(NotAllRequiredFieldsFound); }
 
   Ok(fix_message_fields)
 }
@@ -121,8 +159,11 @@ mod tests {
 
   #[test]
   fn it_should_complain_when_not_all_required_header_fields_presented() {
-    // should split message by delimiter
-    unimplemented!();
+    let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
+      "52=19980604-07:58:28", "112=19980604-07:58:28", "10=173"];
+    let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+
+    assert_eq!(parse(&message).unwrap_err(), NotAllRequiredFieldsFound);
   }
 
   #[test]

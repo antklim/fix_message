@@ -5,13 +5,13 @@ use self::FIXMessageError::*;
 
 #[derive(PartialEq, Debug)]
 pub enum FIXMessageError <'a> {
-  ProtocolVersionNotFound,
   InvalidChecksum(FIXChecksumValidatorError),
   InvalidChecksumValue,
   InvalidFieldStructure,
   InvalidFirstField(&'a str),
   InvalidSecondField(&'a str),
   InvalidThirdField(&'a str),
+  NotAllRequiredFieldsFound,
 }
 
 impl <'a> fmt::Display for FIXMessageError<'a> {
@@ -29,13 +29,13 @@ impl <'a> fmt::Display for FIXMessageError<'a> {
 impl <'a> Error for FIXMessageError<'a> {
   fn description(&self) -> &str {
     match *self {
-      ProtocolVersionNotFound => "FIX message protocol version not found.",
       InvalidChecksum(..) => "Invalid FIX message checksum",
       InvalidChecksumValue => "Invalid value of FIX message checksum",
       InvalidFieldStructure => "Invalid structure of FIX message field, should be <tag>=<value>",
       InvalidFirstField(..) => "Invalid first field, should be `8` but found",
       InvalidSecondField(..) => "Invalid first field, should be `9` but found",
       InvalidThirdField(..) => "Invalid first field, should be `35` but found",
+      NotAllRequiredFieldsFound => "Not all required fields found",
     }
   }
 }
