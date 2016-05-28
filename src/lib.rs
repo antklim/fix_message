@@ -14,18 +14,19 @@ extern crate fix_checksum;
 
 use std::result;
 
+pub use self::constants::*;
 pub use self::errors::*;
 // pub use self::generator::*;
 pub use self::parser::*;
 pub use self::structs::*;
+// pub use self::traits::*;
 pub use self::FIXMessageError::*;
 
-pub const FIX_MESSAGE_DELIMITER: char = '\x01';
-pub const FIX_MESSAGE_FIELD_DELIMITER: char = '\x3D';
+pub type FIXMessageResult<'a, T> = result::Result<T, FIXMessageError<'a>>;
 
-pub type FIXMessageResult<T> = result::Result<T, FIXMessageError>;
-
+mod constants;
 mod errors;
 // mod generator;
 mod parser;
 mod structs;
+// mod traits;
