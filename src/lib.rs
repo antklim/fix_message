@@ -26,6 +26,8 @@ pub type FIXMessageResult<'a, T> = result::Result<T, FIXMessageError<'a>>;
 
 mod constants;
 mod errors;
+pub mod fix_message_fields;
+
 // mod generator;
 mod parser;
 mod structs;

@@ -12,6 +12,7 @@ pub enum FIXMessageError <'a> {
   InvalidSecondField(&'a str),
   InvalidThirdField(&'a str),
   NotAllRequiredFieldsFound,
+  ExtraRequiredFieldFound,
 }
 
 impl <'a> fmt::Display for FIXMessageError<'a> {
@@ -36,6 +37,7 @@ impl <'a> Error for FIXMessageError<'a> {
       InvalidSecondField(..) => "Invalid first field, should be `9` but found",
       InvalidThirdField(..) => "Invalid first field, should be `35` but found",
       NotAllRequiredFieldsFound => "Not all required fields found",
+      ExtraRequiredFieldFound => "More than 1(repetition) required field found",
     }
   }
 }
