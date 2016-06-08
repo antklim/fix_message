@@ -1,10 +1,13 @@
-use super::super::{FIXMessage, FIXMessageField, FIX_MESSAGE_DELIMITER};
-use super::super::FIXMessageError::*;
-use super::*;
+extern crate fix_message;
+extern crate fix_checksum;
+
+use fix_message::*;
 use fix_checksum::FIXChecksumValidatorError::*;
 
+// Message parser ==============================================================
+
 #[test]
-fn it_should_complain_when_checksum_not_found() {
+fn parser_should_complain_when_checksum_not_found() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR",
     "56=INVMGR", "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -13,7 +16,7 @@ fn it_should_complain_when_checksum_not_found() {
 }
 
 #[test]
-fn it_should_complain_when_checksum_format_is_invalid() {
+fn parser_should_complain_when_checksum_format_is_invalid() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
     "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=2ZZ"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -23,7 +26,7 @@ fn it_should_complain_when_checksum_format_is_invalid() {
 }
 
 #[test]
-fn it_should_complain_when_checksum_is_invalid() {
+fn parser_should_complain_when_checksum_is_invalid() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
     "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=231"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -32,7 +35,7 @@ fn it_should_complain_when_checksum_is_invalid() {
 }
 
 #[test]
-fn it_should_complain_when_invalid_field_structure_found() {
+fn parser_should_complain_when_invalid_field_structure_found() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=", "49=BRKR", "56=INVMGR",
     "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=188"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -41,7 +44,7 @@ fn it_should_complain_when_invalid_field_structure_found() {
 }
 
 #[test]
-fn it_should_complain_when_the_first_field_is_incorrect() {
+fn parser_should_complain_when_the_first_field_is_incorrect() {
   let message_parts: Vec<&str> = vec!["9=FIX.4.2", "8=73", "35=0", "49=BRKR", "56=INVMGR",
     "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -50,7 +53,7 @@ fn it_should_complain_when_the_first_field_is_incorrect() {
 }
 
 #[test]
-fn it_should_complain_when_the_second_field_is_incorrect() {
+fn parser_should_complain_when_the_second_field_is_incorrect() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "35=73", "9=0", "49=BRKR", "56=INVMGR",
     "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -59,7 +62,7 @@ fn it_should_complain_when_the_second_field_is_incorrect() {
 }
 
 #[test]
-fn it_should_complain_when_the_third_field_is_incorrect() {
+fn parser_should_complain_when_the_third_field_is_incorrect() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "34=0", "49=BRKR", "56=INVMGR",
     "35=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -68,7 +71,7 @@ fn it_should_complain_when_the_third_field_is_incorrect() {
 }
 
 #[test]
-fn it_should_complain_when_not_all_required_header_fields_presented() {
+fn parser_should_complain_when_not_all_required_header_fields_presented() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
     "52=19980604-07:58:28", "112=19980604-07:58:28", "10=173"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -77,7 +80,7 @@ fn it_should_complain_when_not_all_required_header_fields_presented() {
 }
 
 #[test]
-fn it_should_complain_when_required_header_field_repeated() {
+fn parser_should_complain_when_required_header_field_repeated() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "35=0", "49=BRKR", "56=INVMGR",
     "52=19980604-07:58:28", "112=19980604-07:58:28", "10=131"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
@@ -86,7 +89,7 @@ fn it_should_complain_when_required_header_field_repeated() {
 }
 
 #[test]
-fn it_should_parse_fix_message() {
+fn parser_should_parse_fix_message() {
   let message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
     "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
   let message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
