@@ -80,100 +80,181 @@ fn validate_and_parse<'a>(message_fields: Vec<&'a str>) -> FIXMessageResult<'a, 
 
 /// This function validates and parses FIX message
 ///
-/// # Examples
+/// # Errors
+/// Returns `ChecksumFieldNotFound` when `10 - ChekSum` field not found in message:
+///
 /// ```
-/// // extern crate fix_checksum;
-/// // extern crate fix_message;
+/// extern crate fix_checksum;
 ///
-/// // use fix_message::*;
-/// // use self::fix_message::FIXMessageError::*;
-/// // use self::fix_checksum::FIXChecksumValidatorError::*;
-/// //
-/// // Error when checksum not found
-/// // let mut message_parts: Vec<&str> = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR",
-/// //  "56=INVMGR", "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28"];
-/// // let mut message: String = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+/// use fix_checksum::FIXChecksumValidatorError::*;
 ///
-/// // assert_eq!(parse(&message).unwrap_err(), InvalidChecksum(ChecksumFieldNotFound));
+/// let mut message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR",
+///   "56=INVMGR", "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28"];
+/// let mut message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
 ///
-/// // Error when checksum format is invalid
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
-/// //   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=2ZZ"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(),
-/// //   InvalidChecksum(ChecksumFieldInvalidFormat("2ZZ".parse::<u32>().unwrap_err())));
-/// //
-/// // // Error when checksum is invalid
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
-/// //   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=231"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), InvalidChecksumValue);
-/// //
-/// // // Error when invalid field structure found
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "35=", "49=BRKR", "56=INVMGR",
-/// //   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=188"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), InvalidFieldStructure);
-/// //
-/// // // Error when the first field is incorrect
-/// // message_parts = vec!["9=FIX.4.2", "8=73", "35=0", "49=BRKR", "56=INVMGR",
-/// //   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), InvalidFirstField("9"));
-/// //
-/// // // Error when the second field is incorrect
-/// // message_parts = vec!["8=FIX.4.2", "35=73", "9=0", "49=BRKR", "56=INVMGR",
-/// //   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), InvalidSecondField("35"));
-/// //
-/// // // Error when the third field is incorrect
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "34=0", "49=BRKR", "56=INVMGR",
-/// //   "35=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), InvalidThirdField("34"));
-/// //
-/// // // Error when not all required header fields presented
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
-/// //   "52=19980604-07:58:28", "112=19980604-07:58:28", "10=173"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), NotAllRequiredFieldsFound);
-/// //
-/// // // Error when required header field repeated
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "35=0", "49=BRKR", "56=INVMGR",
-/// //   "52=19980604-07:58:28", "112=19980604-07:58:28", "10=131"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // assert_eq!(parse(&message).unwrap_err(), ExtraRequiredFieldFound);
+/// assert_eq!(parse(&message).unwrap_err(), InvalidChecksum(ChecksumFieldNotFound));
+/// # }
+/// ```
 ///
-/// // Successful message parsing
-/// // message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
-/// //   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
-/// // message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
-/// //
-/// // let expected_fix_message = FIXMessage {
-/// //   version: "FIX.4.2".to_string(),
-/// //   data: vec![
-/// //     FIXMessageField { tag: "8".to_string(), value: "FIX.4.2".to_string() } ,
-/// //     FIXMessageField { tag: "9".to_string(), value: "73".to_string() } ,
-/// //     FIXMessageField { tag: "35".to_string(), value: "0".to_string() } ,
-/// //     FIXMessageField { tag: "49".to_string(), value: "BRKR".to_string() } ,
-/// //     FIXMessageField { tag: "56".to_string(), value: "INVMGR".to_string() } ,
-/// //     FIXMessageField { tag: "34".to_string(), value: "235".to_string() } ,
-/// //     FIXMessageField { tag: "52".to_string(), value: "19980604-07:58:28".to_string() } ,
-/// //     FIXMessageField { tag: "112".to_string(), value: "19980604-07:58:28".to_string() } ,
-/// //     FIXMessageField { tag: "10".to_string(), value: "236".to_string() }
-/// //   ]
-/// // };
-/// //
-/// //  assert_eq!(parse(&message).unwrap(), expected_fix_message);
+/// Returns `ChecksumFieldInvalidFormat` when `10 - ChekSum` field value in invalid format:
+///
+/// ```
+/// extern crate fix_checksum;
+///
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+/// use fix_checksum::FIXChecksumValidatorError::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
+///   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=2ZZ"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(),
+///   InvalidChecksum(ChecksumFieldInvalidFormat("2ZZ".parse::<u32>().unwrap_err())));
+/// # }
+/// ```
+///
+/// Returns `InvalidChecksumValue` when `10 - ChekSum` field value is not valid:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
+///   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=231"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), InvalidChecksumValue);
+/// # }
+/// ```
+///
+/// Returns `InvalidFieldStructure` when FIX message field does not have value:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "35=", "49=BRKR", "56=INVMGR",
+///   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=188"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), InvalidFieldStructure);
+/// # }
+/// ```
+///
+/// Returns `InvalidFirstField` when the first field in message is not `8 - BeginString`:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["9=FIX.4.2", "8=73", "35=0", "49=BRKR", "56=INVMGR",
+///   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), InvalidFirstField("9"));
+/// # }
+/// ```
+///
+/// Returns `InvalidSecondField` when the second field in message is not `9 - BodyLength`:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "35=73", "9=0", "49=BRKR", "56=INVMGR",
+///   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), InvalidSecondField("35"));
+/// # }
+/// ```
+///
+/// Returns `InvalidThirdField` when the third field in message is not `35 - MsgType`:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "34=0", "49=BRKR", "56=INVMGR",
+///   "35=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), InvalidThirdField("34"));
+/// # }
+/// ```
+///
+/// Returns `NotAllRequiredFieldsFound` when not all fields required for standard
+/// header were found:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
+///   "52=19980604-07:58:28", "112=19980604-07:58:28", "10=173"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), NotAllRequiredFieldsFound);
+/// # }
+/// ```
+///
+/// Returns `ExtraRequiredFieldFound` when additional required field has been
+/// found in standard header:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "35=0", "49=BRKR", "56=INVMGR",
+///   "52=19980604-07:58:28", "112=19980604-07:58:28", "10=131"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// assert_eq!(parse(&message).unwrap_err(), ExtraRequiredFieldFound);
+/// # }
+/// ```
+///
+/// # Examples
+///
+/// Basic usage:
+///
+/// ```
+/// # #[macro_use] extern crate fix_message;
+/// # fn main() {
+/// use fix_message::*;
+///
+/// let message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
+///   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
+/// let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+///
+/// let expected_fix_message = FIXMessage {
+///   version: "FIX.4.2".to_string(),
+///   data: vec![
+///     FIXMessageField { tag: "8".to_string(), value: "FIX.4.2".to_string() } ,
+///     FIXMessageField { tag: "9".to_string(), value: "73".to_string() } ,
+///     FIXMessageField { tag: "35".to_string(), value: "0".to_string() } ,
+///     FIXMessageField { tag: "49".to_string(), value: "BRKR".to_string() } ,
+///     FIXMessageField { tag: "56".to_string(), value: "INVMGR".to_string() } ,
+///     FIXMessageField { tag: "34".to_string(), value: "235".to_string() } ,
+///     FIXMessageField { tag: "52".to_string(), value: "19980604-07:58:28".to_string() } ,
+///     FIXMessageField { tag: "112".to_string(), value: "19980604-07:58:28".to_string() } ,
+///     FIXMessageField { tag: "10".to_string(), value: "236".to_string() }
+///   ]
+/// };
+///
+///  assert_eq!(parse(&message).unwrap(), expected_fix_message);
+/// # }
 /// ```
 pub fn parse(inbound_message: &str) -> FIXMessageResult<FIXMessage> {
   validate_checksum(inbound_message)

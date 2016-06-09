@@ -3,7 +3,9 @@ use std::fmt;
 /// This structure represents field/value pair of FIX message
 #[derive(PartialEq, Debug)]
 pub struct FIXMessageField {
+  /// A unique tag number of FIX message filed
   pub tag: String,
+  /// A value associated with FIX message field
   pub value: String
 }
 
@@ -28,7 +30,9 @@ impl fmt::Display for FIXMessageField {
 /// automatically calculated and added to the message header.
 #[derive(PartialEq, Debug)]
 pub struct FIXMessage {
+  /// FIX protocol version
   pub version: String,
+  /// The list of field/value pairs stored in order they were in message
   pub data: Vec<FIXMessageField>
 }
 
