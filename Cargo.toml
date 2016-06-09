@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["Anton Klimenko <antklim@gmail.com>"]
 description = "Crate contains methods to validate/parse/generate FIX-protocol messages"
 repository = "https://github.com/antklim/fix_message.git"
+documentation = "https://antklim.github.io/docs/fix_message/fix_message/index.html"
 readme = "README.md"
 keywords = ["FIX", "protocol", "message", "validator", "parser", "generator"]
 license = "MIT"
