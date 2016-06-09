@@ -1,128 +1,61 @@
 //! The `fix_message` crate provides functions that parse, validate and generate
 //! FIX messages. These functions are agnostic to FIX protocol version.
 //!
-//! Here validated only those message fields which common for all versions of
-//! FIX protocol.
+//! The crate provides methods to validate only those message fields which common
+//! for all versions of FIX protocol.
 //! This crate should be used as a middleware for parsing and initial validation
 //! of messages. And as middleware for the final validation, checksum
 //! calculation and FIX message generation.
 //!
 //! Message body or additional fields must be validated in version specific
 //! crates.
+//!
+//! # Examples
+//! ## Parse message
+//! ```
+//! use fix_message::*;
+//!
+//! let message_parts = vec!["8=FIX.4.2", "9=73", "35=0", "49=BRKR", "56=INVMGR",
+//!   "34=235", "52=19980604-07:58:28", "112=19980604-07:58:28", "10=236"];
+//! let message = message_parts.join(&(FIX_MESSAGE_DELIMITER.to_string()));
+//!
+//! let expected_fix_message = FIXMessage {
+//!   version: "FIX.4.2".to_string(),
+//!   data: vec![
+//!     FIXMessageField { tag: "8".to_string(), value: "FIX.4.2".to_string() } ,
+//!     FIXMessageField { tag: "9".to_string(), value: "73".to_string() } ,
+//!     FIXMessageField { tag: "35".to_string(), value: "0".to_string() } ,
+//!     FIXMessageField { tag: "49".to_string(), value: "BRKR".to_string() } ,
+//!     FIXMessageField { tag: "56".to_string(), value: "INVMGR".to_string() } ,
+//!     FIXMessageField { tag: "34".to_string(), value: "235".to_string() } ,
+//!     FIXMessageField { tag: "52".to_string(), value: "19980604-07:58:28".to_string() } ,
+//!     FIXMessageField { tag: "112".to_string(), value: "19980604-07:58:28".to_string() } ,
+//!     FIXMessageField { tag: "10".to_string(), value: "236".to_string() }
+//!   ]
+//! };
+//!
+//!  assert_eq!(parse(&message).unwrap(), expected_fix_message);
+//! ```
+//! Please refer to `parse` function documentation for more examples
+extern crate fix_checksum;
 
-use std::error::Error;
-use std::fmt;
 use std::result;
 
-use self::FIXMessageError::{ProtocolVersionNotFound, InvalidChecksum};
+pub use self::constants::*;
+pub use self::errors::*;
+// pub use self::generator::*;
+pub use self::parser::*;
+pub use self::structs::*;
+// pub use self::traits::*;
+pub use self::FIXMessageError::*;
 
-const FIX_MESSAGE_DELIMITER: char = '\x01';
-const FIX_MESSAGE_FIELD_DELIMITER: char = '\x3D';
+pub type FIXMessageResult<'a, T> = result::Result<T, FIXMessageError<'a>>;
 
-#[derive(PartialEq, Debug)]
-pub enum FIXMessageError {
-  ProtocolVersionNotFound,
-  InvalidChecksum,
-}
+mod constants;
+mod errors;
+pub mod fix_message_fields;
 
-impl fmt::Display for FIXMessageError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match *self {
-      _ => write!(f, "{}", self.description()),
-    }
-  }
-}
-
-impl Error for FIXMessageError {
-  fn description(&self) -> &str {
-    match *self {
-      ProtocolVersionNotFound => "FIX message protocol version not found",
-      InvalidChecksum => "Invalid FIX message checksum.",
-    }
-  }
-}
-
-/// This structure represents field/value pair of FIX message
-pub struct FIXMessageField {
-  field: String,
-  value: String
-}
-
-/// This structure represents the whole FIX message
-///
-/// ### Parsing FIX message
-/// When parsing FIX messaged then field/value pairs stored in order they
-/// were in the message.
-///
-/// ### Generating FIX messages
-/// When generating FIX message then field/value pairs will be concatenated
-/// in the order they stored in vector.
-/// First two fileds (8, 9) should not be provided in data (will be ignored if
-/// found). Field `8` - `BeginString` will be automatically added to the message
-/// header and have `FIXMessage.version` value. Field `9` - `BodyLength` will be
-/// automatically calculated and added to the message header.
-pub struct FIXMessage {
-  version: String,
-  data: Vec<FIXMessageField>
-}
-
-/// This function validates and parses FIX message
-///
-/// # Examples
-pub fn parse(inbound_message: &str) -> FIXMessageResult<FIXMessage> {
-  unimplemented!();
-}
-
-/// This function validates and generates FIX message
-///
-/// # Examples
-pub fn generate(outbound_messge: FIXMessage) -> FIXMessageResult<String> {
-  unimplemented!();
-}
-
-pub type FIXMessageResult<T> = result::Result<T, FIXMessageError>;
-
-#[cfg(test)]
-mod tests {
-  use super::{parse, generate};
-
-  #[test]
-  fn it_should_complain_when_checksum_not_found() {
-    // checksum must always be the last
-    unimplemented!();
-  }
-
-  #[test]
-  fn it_should_complain_when_checksum_format_is_not_valid() {
-    unimplemented!();
-  }
-
-  #[test]
-  fn it_should_complain_when_checksum_is_incorrect() {
-    unimplemented!();
-  }
-
-  #[test]
-  fn it_should_complain_when_not_all_required_header_fields_presented() {
-    // should split message by delimiter
-    unimplemented!();
-  }
-
-  #[test]
-  fn it_should_complain_when_first_three_fields_in_wrong_order() {
-    // should split message by delimiter
-    unimplemented!();
-  }
-
-  #[test]
-  fn it_should_parse_fix_message() {
-    // should split message by delimiter
-    unimplemented!();
-  }
-
-  #[test]
-  fn it_should_generate_fix_message() {
-    // concatenate message
-    unimplemented!();
-  }
-}
+// mod generator;
+mod parser;
+mod structs;
+// mod traits;
